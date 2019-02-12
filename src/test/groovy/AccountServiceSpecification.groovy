@@ -42,6 +42,22 @@ class AccountServiceSpecification extends Specification {
     }
 
 
+    def "withdraw and deposit"() {
+        given:
+        AccountService accountService = getEmptyAccountService()
+
+        def a = accountService.openAccount(holder, EUR, today).b
+
+        expect:
+        accountService.withdraw(a.number, Money.of(10, "EUR")) ==
+                new Either.Left(new TransferError.InsufficientFunds(a.number))
+
+        accountService.deposit(a.number, Money.of(100, "EUR")).right
+        accountService.withdraw(a.number, Money.of(10, "EUR")).right
+
+        accountService.balance(a.number) == new Either.Right(Money.of(90, "EUR"))
+    }
+
     def "transfer"() {
         given:
         AccountService accountService = getEmptyAccountService()
