@@ -56,6 +56,10 @@ class AccountServiceSpecification extends Specification {
         accountService.withdraw(a.number, Money.of(10, "EUR")).right
 
         accountService.balance(a.number) == new Either.Right(Money.of(90, "EUR"))
+
+        // should not allow deposits and withdrawals in a different currency
+        accountService.deposit(a.number, Money.of(100, "GBP")).left
+        accountService.withdraw(a.number, Money.of(10, "GBP")).left
     }
 
     def "transfer"() {
