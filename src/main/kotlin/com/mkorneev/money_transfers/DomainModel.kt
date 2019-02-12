@@ -20,12 +20,18 @@ data class Account(val number: AccountNumber,
     val currency: CurrencyUnit = balance.currency
 }
 
+data class AccountOpenRequest(val holder: Holder, val currency: CurrencyUnit)
+
+
 data class AccountTransaction(val id: TransactionId, val from: AccountNumber, val to: AccountNumber,
                               val amount: Money, val timestamp: Instant, val message: String)
 
-
 data class TransferRequest @JvmOverloads constructor(
         val from: AccountNumber, val to: AccountNumber, val amount: Money,
+        val datetime: Instant = Instant.now(), val message: String = "")
+
+data class DepositRequest @JvmOverloads constructor(
+        val accountNumber: AccountNumber, val amount: Money,
         val datetime: Instant = Instant.now(), val message: String = "")
 
 
@@ -64,6 +70,8 @@ abstract class AccountRepository : Repository<Account, AccountNumber>
 
 interface IAccountService {
     fun openAccount(holder: Holder, currency: CurrencyUnit, openedAt: LocalDate): Either<OpenError, Account>
+    fun getDetails(accountNumber: AccountNumber): Either<BalanceError, Account>
+
     fun withdraw(accountNumber: AccountNumber, amount: Money): Either<TransferError, Account>
     fun deposit(accountNumber: AccountNumber, amount: Money): Either<TransferError, Account>
     fun transfer(request: TransferRequest): Either<TransferError, AccountTransaction>

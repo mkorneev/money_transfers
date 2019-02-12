@@ -2,6 +2,7 @@ package com.mkorneev.money_transfers
 
 import arrow.core.*
 import arrow.core.extensions.either.monad.flatten
+import com.mkorneev.money_transfers.TransferError.*
 import org.iban4j.CountryCode
 import org.iban4j.Iban
 import org.javamoney.moneta.Money
@@ -13,7 +14,6 @@ import arrow.core.extensions.either.monad.binding as bindingE
 
 
 class AccountService private constructor(private val accountRepository: AccountRepository) : IAccountService {
-
     companion object : SingletonHolder<AccountService, AccountRepository>(::AccountService) {
         @JvmStatic
         fun getService(ar: AccountRepository) = AccountService.getInstance(ar)
@@ -21,7 +21,7 @@ class AccountService private constructor(private val accountRepository: AccountR
 
 
     private fun generateUniqueAccountNumber(): Try<AccountNumber> {
-        val accountNumber: AccountNumber = Iban.random(CountryCode.BE).toFormattedString()
+        val accountNumber: AccountNumber = Iban.random(CountryCode.BE).toString()
         return accountRepository.exists(accountNumber)
                 .flatMap { exists ->
                     if (!exists) accountNumber.success()
@@ -44,84 +44,88 @@ class AccountService private constructor(private val accountRepository: AccountR
 
     override fun withdraw(accountNumber: AccountNumber, amount: Money): Either<TransferError, Account> =
             accountRepository.query(accountNumber)
-                    .toEither { TransferError.RepositoryException(it) }
+                    .toEither { RepositoryException(it) }
                     .flatMap {
                         it
-                                .mapLeft { TransferError.NoSuchAccount(accountNumber) }
+                                .mapLeft { NoSuchAccount(accountNumber) }
                                 .flatMap { account -> debit(account, amount) }
                     }
 
     private fun debit(account: Account, amount: Money): Either<TransferError, Account> =
             when {
-                amount.isNegative -> TransferError.NegativeAmount.left()
-                account.currency != amount.currency -> TransferError.DifferentCurrency(account.number).left()
-                account.balance < amount -> TransferError.InsufficientFunds(account.number).left()
+                amount.isNegative -> NegativeAmount.left()
+                account.currency != amount.currency -> DifferentCurrency(account.number).left()
+                account.balance < amount -> InsufficientFunds(account.number).left()
                 else -> {
                     val result = account.copy(balance = account.balance.subtract(amount))
                     accountRepository.store(result)
-                            .toEither().mapLeft { TransferError.RepositoryException(it) }
+                            .toEither().mapLeft { RepositoryException(it) }
                 }
             }
 
 
     override fun deposit(accountNumber: AccountNumber, amount: Money): Either<TransferError, Account> =
             accountRepository.query(accountNumber)
-                    .toEither { TransferError.RepositoryException(it) }
+                    .toEither { RepositoryException(it) }
                     .flatMap {
                         it
-                                .mapLeft { TransferError.NoSuchAccount(accountNumber) }
+                                .mapLeft { NoSuchAccount(accountNumber) }
                                 .flatMap { account -> credit(account, amount) }
                     }
 
     private fun credit(account: Account, amount: Money): Either<TransferError, Account> =
             when {
-                amount.isNegative -> TransferError.NegativeAmount.left()
-                account.currency != amount.currency -> TransferError.DifferentCurrency(account.number).left()
+                amount.isNegative -> NegativeAmount.left()
+                account.currency != amount.currency -> DifferentCurrency(account.number).left()
                 else -> {
                     val result = account.copy(balance = account.balance.add(amount))
                     accountRepository.store(result)
-                            .toEither().mapLeft { TransferError.RepositoryException(it) }
+                            .toEither().mapLeft { RepositoryException(it) }
                 }
             }
 
 
     override fun transfer(request: TransferRequest): Either<TransferError, AccountTransaction> {
         val amount = request.amount
-        if (amount.isNegative) return TransferError.NegativeAmount.left()
+        if (amount.isNegative) return NegativeAmount.left()
 
         return bindingT {
             val (fromEither) = accountRepository.query(request.from)
             val (toEither) = accountRepository.query(request.to)
 
             bindingE<TransferError, AccountTransaction> {
-                val (from) = fromEither.mapLeft { TransferError.NoSuchAccount(request.from) }
-                val (to) = toEither.mapLeft { TransferError.NoSuchAccount(request.to) }
+                val (from) = fromEither.mapLeft { NoSuchAccount(request.from) }
+                val (to) = toEither.mapLeft { NoSuchAccount(request.to) }
                 val (transaction) = transfer(from, to, amount, request.message)
                 transaction
             }
         }
-                .toEither { TransferError.RepositoryException(it) }.flatten()
+                .toEither { RepositoryException(it) }.flatten()
     }
 
     private fun transfer(from: Account, to: Account, amount: Money, message: String = "",
                          overdraftAllowed: Boolean = false): Either<TransferError, AccountTransaction> =
             when {
-                from.currency != amount.currency -> TransferError.DifferentCurrency(from.number).left()
-                to.currency != amount.currency -> TransferError.DifferentCurrency(to.number).left()
-                !overdraftAllowed && from.balance < amount -> TransferError.InsufficientFunds(from.number).left()
-                else -> bindingE<TransferError, AccountTransaction> {
+                from.currency != amount.currency -> DifferentCurrency(from.number).left()
+                to.currency != amount.currency -> DifferentCurrency(to.number).left()
+                !overdraftAllowed && from.balance < amount -> InsufficientFunds(from.number).left()
+                else -> bindingE {
                     val (f) = debit(from, amount)
                     val (t) = credit(to, amount)
                     AccountTransaction("a", f.number, t.number, amount, Instant.now(), message)
                 }
             }
 
-    override fun balance(accountNumber: AccountNumber): Either<BalanceError, Money> =
+    override fun getDetails(accountNumber: AccountNumber): Either<BalanceError, Account> =
             accountRepository.query(accountNumber)
                     .toEither { BalanceError.RepositoryException(it) }
                     .flatMap {
                         it
                                 .mapLeft { BalanceError.NoSuchAccount }
-                                .map { account -> account.balance }
+                                .map { account -> account }
                     }
+
+    override fun balance(accountNumber: AccountNumber): Either<BalanceError, Money> =
+            getDetails(accountNumber).map { it.balance }
+
 }

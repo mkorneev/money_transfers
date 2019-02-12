@@ -19,7 +19,14 @@ dependencies {
     compile("io.arrow-kt:arrow-core-data:$arrow_version")
     compile("io.arrow-kt:arrow-core-extensions:$arrow_version")
 
+    compile("com.sparkjava:spark-kotlin:1.0.0-alpha")
+    compile("org.slf4j:slf4j-simple:1.7.21")
+
+    implementation("com.squareup.moshi:moshi:1.8.0")
+
     testCompile("org.spockframework:spock-core:1.0-groovy-2.4")
+    testCompile("com.despegar:spark-test:1.1.8")
+
 }
 
 repositories {

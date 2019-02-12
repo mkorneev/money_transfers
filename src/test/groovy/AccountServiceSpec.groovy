@@ -31,7 +31,7 @@ class AccountServiceSpec extends Specification {
         account.holder == holder
         account.currency == EUR
         account.openedAt == today
-        account.number.length() == 19  // Formatted IBAN length
+        account.number.length() == 16  // IBAN length
 
         accountService.balance(account.number) == new Either.Right(Money.of(0, "EUR"))
     }
