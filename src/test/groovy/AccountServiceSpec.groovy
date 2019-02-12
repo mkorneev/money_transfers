@@ -13,25 +13,20 @@ import javax.money.Monetary
 import java.time.Clock
 import java.time.LocalDate
 
-class AccountServiceSpecification extends Specification {
+class AccountServiceSpec extends Specification {
 
     public static final CurrencyUnit EUR = Monetary.getCurrency("EUR")
     public static final holder = new Holder("Client", "Somewhere")
     public static final clock = Clock.systemUTC()
     public static final today = LocalDate.now(clock)
 
-    static def getEmptyAccountService() {
-        AccountRepositoryInMemory accountRepository = new AccountRepositoryInMemory()
-        return AccountService.getService(accountRepository)
-    }
-
+    AccountService accountService = AccountService.getService(new AccountRepositoryInMemory())
 
     def "open an account"() {
-        given:
-        AccountService accountService = getEmptyAccountService()
+        when:
         def account = accountService.openAccount(holder, EUR, today).b
 
-        expect:
+        then:
         account.balance.isZero()
         account.holder == holder
         account.currency == EUR
@@ -44,8 +39,6 @@ class AccountServiceSpecification extends Specification {
 
     def "withdraw and deposit"() {
         given:
-        AccountService accountService = getEmptyAccountService()
-
         def a = accountService.openAccount(holder, EUR, today).b
 
         expect:
@@ -64,8 +57,6 @@ class AccountServiceSpecification extends Specification {
 
     def "transfer"() {
         given:
-        AccountService accountService = getEmptyAccountService()
-
         def a = accountService.openAccount(holder, EUR, today).b
         def b = accountService.openAccount(holder, EUR, today).b
 
@@ -80,8 +71,6 @@ class AccountServiceSpecification extends Specification {
 
     def "transfer with insufficient funds"() {
         given:
-        AccountService accountService = getEmptyAccountService()
-
         def a = accountService.openAccount(holder, EUR, today).b
         def b = accountService.openAccount(holder, EUR, today).b
 
@@ -97,8 +86,6 @@ class AccountServiceSpecification extends Specification {
 
     def "transfer with wrong currency"() {
         given:
-        AccountService accountService = getEmptyAccountService()
-
         def a = accountService.openAccount(holder, EUR, today).b
         def b = accountService.openAccount(holder, EUR, today).b
 
@@ -117,8 +104,6 @@ class AccountServiceSpecification extends Specification {
     @Ignore
     def "transfer race condition"() {
         given:
-        AccountService accountService = getEmptyAccountService()
-
         def a = accountService.openAccount(holder, EUR, today).b
         def b = accountService.openAccount(holder, EUR, today).b
 
