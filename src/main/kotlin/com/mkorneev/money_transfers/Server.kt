@@ -92,7 +92,7 @@ private fun convertError(it: TransferError): ErrorMessage {
 inline fun <reified V> Either<ErrorMessage, V>.toResponse(routeHandler: RouteHandler): Any =
         this.fold(
                 {
-                    routeHandler.status(it.code);
+                    routeHandler.status(it.code)
                     JsonAdaptors.toJson(it)
                 },
                 JsonAdaptors::toJson)

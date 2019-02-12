@@ -39,6 +39,7 @@ data class DepositRequest @JvmOverloads constructor(
 
 sealed class OpenError {
     data class RepositoryException(val throwable: Throwable) : OpenError()
+    object DuplicateId: OpenError()
 }
 
 sealed class TransferError {
@@ -56,12 +57,15 @@ sealed class BalanceError {
 
 // Repositories
 
-object NotFound
+data class NotFound<IdType>(val id: IdType)
+object DuplicateId
 
 interface Repository<V, IdType> {
-    fun query(id: IdType): Try<Either<NotFound, V>>
-    fun store(value: V): Try<V>
+    fun query(id: IdType): Try<Either<NotFound<IdType>, V>>
     fun exists(id: IdType): Try<Boolean>
+    fun create(id: AccountNumber, account: Account): Either<DuplicateId, Account>
+    fun <E> transform1(id: AccountNumber, f: (Account) -> Either<E, Account>): Either<Either<NotFound<IdType>, E>, Account>
+    fun <E> transform(updates: List<Update<E>>): Either<Either<NotFound<IdType>, E>, List<Account>>
 }
 
 abstract class AccountRepository : Repository<Account, AccountNumber>

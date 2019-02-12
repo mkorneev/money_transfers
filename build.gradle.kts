@@ -18,6 +18,9 @@ dependencies {
 
     compile("io.arrow-kt:arrow-core-data:$arrow_version")
     compile("io.arrow-kt:arrow-core-extensions:$arrow_version")
+    compile("io.arrow-kt:arrow-extras-extensions:$arrow_version")
+
+    compile("org.scala-stm:scala-stm_2.10:0.8-SNAPSHOT")
 
     compile("com.sparkjava:spark-kotlin:1.0.0-alpha")
     compile("org.slf4j:slf4j-simple:1.7.21")
