@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.japi.STM
 
-typealias Update<E> = Pair<AccountNumber, (Account) -> Either<E, Account>>
+data class Update<E>(val id: AccountNumber, val f: (Account) -> Either<E, Account>)
+data class RefUpdate<A, E>(val ref: Ref.View<A>, val f: (A) -> Either<E, A>)
+data class Replacement<A>(val ref: Ref.View<A>, val value: A)
 
 class AccountRepositoryInMemory : AccountRepository() {
     private val accounts: MutableMap<AccountNumber, Ref.View<Account>> = HashMap()
@@ -44,11 +46,14 @@ class AccountRepositoryInMemory : AccountRepository() {
                 }
     }
 
-    override fun <E> transform(updates: List<Update<E>>): Either<Either<NotFound<AccountNumber>, E>, List<Account>> {
-        return updates.map { u ->
-            accounts[u.first].rightIfNotNull { NotFound(u.first).left() }
-                    .map { Pair(it, u.second) }
-        }
+    override fun <E> transform(updates: List<Update<E>>):
+            Either<Either<NotFound<AccountNumber>, E>, List<Account>> {
+        return updates
+                .map { update ->
+                    accounts[update.id]
+                            .rightIfNotNull { NotFound(update.id).left() }
+                            .map { RefUpdate(it, update.f) }
+                }
                 .sequence(Either.applicative())
                 .flatMap { refs ->
                     val callable = {
@@ -57,19 +62,16 @@ class AccountRepositoryInMemory : AccountRepository() {
                         STM.afterCompletion { logger.debug("STM Complete") }
 
                         val results = refs
-                                .map { p ->
-                                    val ref = p.first
-                                    val f = p.second
-                                    f(ref.get()).map { Pair(ref, it) }
+                                .map { update ->
+                                    (update.f)(update.ref.get())
+                                            .map { Replacement(update.ref, it) }
                                 }
                                 .sequence(Either.applicative()).fix()
 
                         results.map { resultList ->
-                            resultList.map { pair ->
-                                val ref = pair.first
-                                val b = pair.second
-                                ref.set(b)
-                                b
+                            resultList.map { replacement ->
+                                replacement.ref.set(replacement.value)
+                                replacement.value
                             }
                         }
                     }
