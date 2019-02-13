@@ -38,7 +38,7 @@ class ApiSpec extends Specification {
         response.code() == 200
 
         def body = new String(response.body())
-        body.startsWith("Please refer to API documentation at")
+        body.contains("Please refer to API documentation at")
     }
 
     def "open an account with no data"() {

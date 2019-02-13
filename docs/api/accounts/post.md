@@ -1,9 +1,8 @@
-# Create Account
+# Open Account
 
-Create an Account for the authenticated User if an Account for that User does
-not already exist. Each User can only have one Account.
+Open a new Account for a given holder and currency.
 
-**URL** : `/api/accounts/`
+**URL** : `/api/accounts`
 
 **Method** : `POST`
 

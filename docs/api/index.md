@@ -10,8 +10,8 @@ Endpoints for opening accounts and transfering money.
 
 * [Open An Account](accounts/post.md) : `POST /api/accounts/`
 * [Get Account Details](accounts/number/get.md) : `GET /api/accounts/:number`
-* [Get Account Balance](accounts/number/balance.md) : `GET /api/accounts/:number/balance`
+* [Get Account Balance](accounts/number/balance/get.md) : `GET /api/accounts/:number/balance`
 
-* [Deposit Money](accounts/number/deposit.md) : `GET /api/accounts/:number/deposit`
-* [Withdraw Money](accounts/number/withdraw.md) : `GET /api/accounts/:number/withdraw`
-* [Transfer Money](transfer.md) : `GET /api/transfer`
+* [Deposit Money](accounts/number/deposit/post.md) : `POST /api/accounts/:number/deposit`
+* [Withdraw Money](accounts/number/withdraw/post.md) : `POST /api/accounts/:number/withdraw`
+* [Transfer Money](transfer/post.md) : `POST /api/transfer`

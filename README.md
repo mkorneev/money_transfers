@@ -1,6 +1,6 @@
 Implementation of a RESTful API for money transfers between accounts.
 
-##### Requirements
+### Requirements
 
 1. You can use Java, Scala or Kotlin.
 2. Keep it simple and to the point (e.g. no need to implement any authentication).
@@ -12,12 +12,12 @@ requirement #2 – keep it simple and avoid heavy frameworks.
 a pre-installed container/server).
 7. Demonstrate with tests that the API works as expected.
 
-##### Tech Stack
+### Tech Stack
 
 Kotlin, Spark-Kotlin, Spock, Arrow, Scala-STM, DDD
 
 
-##### How to Run
+### How to Run
 
     ./gradlew run --args <port>
     
@@ -27,11 +27,11 @@ Get test coverage by running
     ./gradlew clean build jacocoTestReport && open build/reports/jacoco/test/html/index.html
     
    
-#### API Documentation
+### API Documentation
 
 See documentation at [docs/api](docs/api/index.md)
 
-#### Performance Test Results
+### Performance Test Results
 
     Server Software:        Jetty(9.4.4.v20170414)
     Server Hostname:        localhost

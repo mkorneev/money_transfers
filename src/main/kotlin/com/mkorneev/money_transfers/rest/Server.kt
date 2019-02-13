@@ -7,13 +7,18 @@ import spark.kotlin.port
 import spark.kotlin.post
 import kotlin.system.exitProcess
 
+const val docsURL = "https://github.com/mkorneev/money_transfers/blob/master/docs/api/index.md"
+
 fun main(args: Array<String>) {
     val requestedPort = parsePort(args)
     port(requestedPort)
 
     get("/") { redirect("/docs") }
 
-    get("/docs") { "Please refer to API documentation at https://github.com/mkorneev/money_transfers/docs/api" }
+    get("/docs") { """<html><body>
+        |<h3>RESTful API for money transfers between accounts</h3>
+        |<p>Please refer to API documentation at <a href="$docsURL">$docsURL</a></p>
+        |</body></html>""".trimMargin() }
 
     path("/api") {
         path("/accounts") {
