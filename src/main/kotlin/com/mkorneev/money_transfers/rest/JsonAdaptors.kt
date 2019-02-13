@@ -1,9 +1,10 @@
-package com.mkorneev.money_transfers
+package com.mkorneev.money_transfers.rest
 
 import arrow.core.Option
 import arrow.core.getOrElse
 import arrow.core.some
 import arrow.core.toOption
+import com.mkorneev.money_transfers.model.*
 import com.squareup.moshi.FromJson
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
@@ -13,6 +14,9 @@ import java.time.Instant
 import java.time.LocalDate
 import javax.money.CurrencyUnit
 import javax.money.Monetary
+import java.math.BigDecimal
+import java.math.RoundingMode
+
 
 class CurrencyUnitJsonAdaptor {
     @ToJson
@@ -49,11 +53,21 @@ class OptionLocalDateJsonAdaptor {
 }
 
 class MoneyJsonAdaptor {
+    data class MoneyJson(val amount: String, val currency: CurrencyUnit)
+
     @ToJson
-    fun toJson(value: Money): String? = value.toString()
+    fun toJson(value: Money): MoneyJson {
+        val decimal = value.number.numberValueExact(BigDecimal::class.java)
+        val defaultFractionDigits = value.currency.getDefaultFractionDigits()
+        val scale = Math.max(decimal.scale(), defaultFractionDigits)
+
+        val amount = decimal.setScale(scale, RoundingMode.UNNECESSARY).toString()
+
+        return MoneyJson(amount, value.currency)
+    }
 
     @FromJson
-    fun fromJson(value: String?): Money = Money.parse(value)
+    fun fromJson(value: MoneyJson): Money = Money.of(BigDecimal(value.amount), value.currency)
 }
 
 object JsonAdaptors {
@@ -92,6 +106,10 @@ object JsonAdaptors {
     @JvmStatic
     fun toJsonJava(value: DepositRequest) =
             moshi.adapter<DepositRequest>(DepositRequest::class.java).toJson(value)
+
+    @JvmStatic
+    fun toJsonJava(value: WithdrawRequest) =
+            moshi.adapter<WithdrawRequest>(WithdrawRequest::class.java).toJson(value)
 
     inline fun <reified V> toJson(value: V) =
             moshi.adapter<V>(V::class.java).toJson(value)

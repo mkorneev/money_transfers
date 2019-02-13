@@ -1,4 +1,4 @@
-package com.mkorneev.money_transfers
+package com.mkorneev.money_transfers.impl
 
 import arrow.core.*
 import arrow.core.extensions.either.applicative.applicative
@@ -6,6 +6,8 @@ import arrow.core.extensions.either.monad.flatMap
 import arrow.data.extensions.list.traverse.map
 import arrow.data.extensions.list.traverse.sequence
 import arrow.data.extensions.listk.monad.map
+import com.mkorneev.money_transfers.model.*
+import org.slf4j.LoggerFactory
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.japi.STM
 
@@ -14,15 +16,17 @@ typealias Update<E> = Pair<AccountNumber, (Account) -> Either<E, Account>>
 class AccountRepositoryInMemory : AccountRepository() {
     private val accounts: MutableMap<AccountNumber, Ref.View<Account>> = HashMap()
 
+    val logger = LoggerFactory.getLogger(AccountRepositoryInMemory::class.java)
+
     override fun query(id: AccountNumber): Try<Either<NotFound<AccountNumber>, Account>> =
             Success(accounts[id].rightIfNotNull { NotFound(id) }.map { it.get() })
 
-    override fun create(id: AccountNumber, account: Account): Either<DuplicateId, Account> = synchronized(accounts) {
+    override fun create(id: AccountNumber, value: Account): Either<DuplicateId, Account> = synchronized(accounts) {
         if (accounts.containsKey(id)) {
             DuplicateId.left()
         } else {
-            accounts[id] = STM.newRef(account)
-            account.right()
+            accounts[id] = STM.newRef(value)
+            value.right()
         }
     }
 
@@ -48,6 +52,10 @@ class AccountRepositoryInMemory : AccountRepository() {
                 .sequence(Either.applicative())
                 .flatMap { refs ->
                     val callable = {
+                        STM.afterCommit { logger.info("STM Commit") }
+                        STM.afterRollback { logger.info("STM Rollback") }
+                        STM.afterCompletion { logger.debug("STM Complete") }
+
                         val results = refs
                                 .map { p ->
                                     val ref = p.first

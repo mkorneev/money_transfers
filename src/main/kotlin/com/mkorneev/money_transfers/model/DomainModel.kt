@@ -1,8 +1,10 @@
-package com.mkorneev.money_transfers
+package com.mkorneev.money_transfers.model
 
 import arrow.core.Either
 import arrow.core.Option
 import arrow.core.Try
+import com.mkorneev.money_transfers.impl.Update
+import com.squareup.moshi.JsonClass
 import org.javamoney.moneta.Money
 import java.time.Instant
 import java.time.LocalDate
@@ -11,8 +13,10 @@ import javax.money.CurrencyUnit
 typealias AccountNumber = String
 typealias TransactionId = String
 
+@JsonClass(generateAdapter = true)
 data class Holder(val fullName: String, val address: String)
 
+@JsonClass(generateAdapter = true)
 data class Account(val number: AccountNumber,
                    val holder: Holder,
                    val openedAt: LocalDate, val closedAt: Option<LocalDate>,
@@ -20,19 +24,28 @@ data class Account(val number: AccountNumber,
     val currency: CurrencyUnit = balance.currency
 }
 
+@JsonClass(generateAdapter = true)
 data class AccountOpenRequest(val holder: Holder, val currency: CurrencyUnit)
 
 
+@JsonClass(generateAdapter = true)
 data class AccountTransaction(val id: TransactionId, val from: AccountNumber, val to: AccountNumber,
                               val amount: Money, val timestamp: Instant, val message: String)
 
+@JsonClass(generateAdapter = true)
 data class TransferRequest @JvmOverloads constructor(
         val from: AccountNumber, val to: AccountNumber, val amount: Money,
-        val datetime: Instant = Instant.now(), val message: String = "")
+        val message: String = "", val datetime: Instant = Instant.now())
 
+@JsonClass(generateAdapter = true)
 data class DepositRequest @JvmOverloads constructor(
         val accountNumber: AccountNumber, val amount: Money,
-        val datetime: Instant = Instant.now(), val message: String = "")
+        val message: String = "", val datetime: Instant = Instant.now())
+
+@JsonClass(generateAdapter = true)
+data class WithdrawRequest @JvmOverloads constructor(
+        val accountNumber: AccountNumber, val amount: Money,
+        val message: String = "", val datetime: Instant = Instant.now())
 
 
 // Errors
@@ -63,12 +76,14 @@ object DuplicateId
 interface Repository<V, IdType> {
     fun query(id: IdType): Try<Either<NotFound<IdType>, V>>
     fun exists(id: IdType): Try<Boolean>
-    fun create(id: AccountNumber, account: Account): Either<DuplicateId, Account>
-    fun <E> transform1(id: AccountNumber, f: (Account) -> Either<E, Account>): Either<Either<NotFound<IdType>, E>, Account>
-    fun <E> transform(updates: List<Update<E>>): Either<Either<NotFound<IdType>, E>, List<Account>>
+    fun create(id: IdType, value: V): Either<DuplicateId, V>
+    fun <E> transform1(id: IdType, f: (V) -> Either<E, V>):
+            Either<Either<NotFound<IdType>, E>, Account>
+    fun <E> transform(updates: List<Update<E>>): Either<Either<NotFound<IdType>, E>, List<V>>
 }
 
 abstract class AccountRepository : Repository<Account, AccountNumber>
+abstract class TransactionRepository : Repository<AccountTransaction, TransactionId>
 
 // Services
 

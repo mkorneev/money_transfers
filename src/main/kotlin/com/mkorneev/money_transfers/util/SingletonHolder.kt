@@ -1,4 +1,4 @@
-package com.mkorneev.money_transfers
+package com.mkorneev.money_transfers.util
 
 open class SingletonHolder<out T, in A>(creator: (A) -> T) {
     private var creator: ((A) -> T)? = creator

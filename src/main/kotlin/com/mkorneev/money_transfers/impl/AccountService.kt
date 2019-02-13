@@ -1,21 +1,28 @@
-package com.mkorneev.money_transfers
+package com.mkorneev.money_transfers.impl
 
 import arrow.core.*
-import com.mkorneev.money_transfers.TransferError.*
+import arrow.core.extensions.either.monad.binding
+import com.mkorneev.money_transfers.util.SingletonHolder
+import com.mkorneev.money_transfers.model.*
+import com.mkorneev.money_transfers.model.TransferError.*
 import org.iban4j.CountryCode
 import org.iban4j.Iban
 import org.javamoney.moneta.Money
+import java.lang.RuntimeException
 import java.time.Instant
 import java.time.LocalDate
 import javax.money.CurrencyUnit
 
+data class Repositories(val accountRepository: AccountRepository, val transactionRepository: TransactionRepository)
 
-class AccountService private constructor(private val accountRepository: AccountRepository) : IAccountService {
-    companion object : SingletonHolder<AccountService, AccountRepository>(::AccountService) {
+class AccountService private constructor(repositories: Repositories) : IAccountService {
+    companion object : SingletonHolder<AccountService, Repositories>(::AccountService) {
         @JvmStatic
-        fun getService(ar: AccountRepository) = AccountService.getInstance(ar)
+        fun getService(repositories: Repositories) = AccountService.getInstance(repositories)
     }
 
+    private val accountRepository = repositories.accountRepository
+    private val transactionRepository = repositories.transactionRepository
 
     private fun generateUniqueAccountNumber(): Try<AccountNumber> {
         val accountNumber: AccountNumber = Iban.random(CountryCode.BE).toString()
@@ -41,7 +48,7 @@ class AccountService private constructor(private val accountRepository: AccountR
 
     override fun withdraw(accountNumber: AccountNumber, amount: Money): Either<TransferError, Account> =
             accountRepository.transform1(accountNumber, debit(amount))
-                    .mapLeft { it.fold({ TransferError.NoSuchAccount(accountNumber) }, { e -> e }) }
+                    .mapLeft { it.fold({ NoSuchAccount(accountNumber) }, { e -> e }) }
 
     private fun debit(amount: Money): (Account) -> Either<TransferError, Account> = { account: Account ->
         when {
@@ -56,7 +63,7 @@ class AccountService private constructor(private val accountRepository: AccountR
 
     override fun deposit(accountNumber: AccountNumber, amount: Money): Either<TransferError, Account> =
             accountRepository.transform1(accountNumber, credit(amount))
-                    .mapLeft { it.fold({ TransferError.NoSuchAccount(accountNumber) }, { e -> e }) }
+                    .mapLeft { it.fold({ NoSuchAccount(accountNumber) }, { e -> e }) }
 
 
     private fun credit(amount: Money): (Account) -> Either<TransferError, Account> = { account: Account ->
@@ -77,8 +84,21 @@ class AccountService private constructor(private val accountRepository: AccountR
         val updates: List<Update<TransferError>> = transfer(request.from, request.to, amount)
 
         return accountRepository.transform(updates)
-                .mapLeft { it.fold({ notFound -> TransferError.NoSuchAccount(notFound.id) }, { e -> e }) }
-                .map { AccountTransaction("a", request.from, request.to, amount, Instant.now(), request.message) }
+                .mapLeft { it.fold({ notFound -> NoSuchAccount(notFound.id) }, { e -> e }) }
+                .flatMap { storeTransaction(request) }
+    }
+
+    // Use only for testing
+    fun transferNotAtomic(request: TransferRequest): Either<TransferError, AccountTransaction> {
+        val amount = request.amount
+        if (amount.isNegative) return NegativeAmount.left()
+
+        return binding {
+            val (w) = withdraw(request.from, amount)
+            val (d) = deposit(request.to, amount)
+            AccountTransaction(getUniqueTransactionId(), w.number, d.number,
+                    amount, Instant.now(), request.message)
+        }
     }
 
     private fun transfer(from: AccountNumber, to: AccountNumber, amount: Money,
@@ -112,5 +132,13 @@ class AccountService private constructor(private val accountRepository: AccountR
 
     override fun balance(accountNumber: AccountNumber): Either<BalanceError, Money> =
             getDetails(accountNumber).map { it.balance }
+
+
+    private fun storeTransaction(request: TransferRequest): Either<RepositoryException, AccountTransaction> {
+        val transaction = AccountTransaction(getUniqueTransactionId(), request.from, request.to,
+                request.amount, Instant.now(), request.message)
+        return transactionRepository.create(transaction.id, transaction)
+                .mapLeft { RepositoryException(RuntimeException("Duplicate transaction ID")) }
+    }
 
 }
