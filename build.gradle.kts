@@ -12,16 +12,15 @@ plugins {
     jacoco
 }
 
-val arrow_version = "0.9.0-SNAPSHOT"
+val arrow_version = "0.8.2"
 
 dependencies {
     compile(kotlin("stdlib-jdk8"))
     compile("org.javamoney:moneta:1.3")
     compile("org.iban4j:iban4j:3.2.1")
 
-    compile("io.arrow-kt:arrow-core-data:$arrow_version")
-    compile("io.arrow-kt:arrow-core-extensions:$arrow_version")
-    compile("io.arrow-kt:arrow-extras-extensions:$arrow_version")
+    compile("io.arrow-kt:arrow-core:$arrow_version")
+    compile("io.arrow-kt:arrow-instances-data:$arrow_version")
 
     compile("org.scala-stm:scala-stm_2.10:0.8-SNAPSHOT")
 

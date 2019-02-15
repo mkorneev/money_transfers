@@ -1,11 +1,11 @@
 package com.mkorneev.money_transfers.impl
 
 import arrow.core.*
-import arrow.core.extensions.either.applicative.applicative
-import arrow.core.extensions.either.monad.flatMap
-import arrow.data.extensions.list.traverse.map
-import arrow.data.extensions.list.traverse.sequence
-import arrow.data.extensions.listk.monad.map
+import arrow.instances.either.applicative.applicative
+import arrow.instances.either.monad.flatMap
+import arrow.instances.list.traverse.map
+import arrow.instances.list.traverse.sequence
+import arrow.instances.listk.monad.map
 import com.mkorneev.money_transfers.model.*
 import org.slf4j.LoggerFactory
 import scala.concurrent.stm.Ref

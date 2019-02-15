@@ -1,7 +1,7 @@
 package com.mkorneev.money_transfers.impl
 
 import arrow.core.*
-import arrow.core.extensions.either.monad.binding
+import arrow.instances.either.monad.binding
 import com.mkorneev.money_transfers.util.SingletonHolder
 import com.mkorneev.money_transfers.model.*
 import com.mkorneev.money_transfers.model.TransferError.*
@@ -94,8 +94,8 @@ class AccountService private constructor(repositories: Repositories) : IAccountS
         if (amount.isNegative) return NegativeAmount.left()
 
         return binding {
-            val (w) = withdraw(request.from, amount)
-            val (d) = deposit(request.to, amount)
+            val w = withdraw(request.from, amount).bind()
+            val d = deposit(request.to, amount).bind()
             AccountTransaction(getUniqueTransactionId(), w.number, d.number,
                     amount, Instant.now(), request.message)
         }
